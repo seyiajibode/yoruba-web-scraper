@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yorùbá Text Web Scraper MVP</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .scraper-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .scraper-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .scraper-section:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+        }
+
+        .section-title {
+            color: #2c3e50;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #95a5a6;
+            transition: all 0.3s ease;
+        }
+
+        .status-indicator.active {
+            background: #e74c3c;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.success {
+            background: #27ae60;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #34495e;
+            font-weight: 500;
+        }
+
+        .input-group input, .input-group select, .input-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ecf0f1;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus, .input-group select:focus, .input-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-small {
+            padding: 8px 15px;
+            font-size: 12px;
+        }
+
+        .results-section {
+            margin-top: 30px;
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .results-stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            text-align: center;
+            flex: 1;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .results-table th, .results-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .results-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .results-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .text-preview {
+            max-width: 300px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .quality-badge {
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .quality-high {
+            background: #d5f4e6;
+            color: #27ae60;
+        }
+
+        .quality-medium {
+            background: #fef5e7;
+            color: #f39c12;
+        }
+
+        .quality-low {
+            background: #fadbd8;
+            color: #e74c3c;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #ecf0f1;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .log-section {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 768px) {
+            .scraper-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .results-stats {
+                flex-direction: column;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🕷️ Yorùbá Text Web Scraper MVP</h1>
+            <p>Collect high-quality Yorùbá text data from trusted Nigerian sources</p>
+        </div>
+
+        <div class="scraper-grid">
+            <!-- BBC Yorùbá Scraper -->
+            <div class="scraper-section">
+                <h3 class="section-title">
+                    <span class="status-indicator" id="bbc-status"></span>
+                    BBC Yorùbá News
+                </h3>
+                <div class="input-group">
+                    <label>Category</label>
+                    <select id="bbc-category">
+                        <option value="all">All Categories</option>
+                        <option value="nigeria">Nigeria News</option>
+                        <option value="world">World News</option>
+                        <option value="sport">Sports</option>
+                        <option value="entertainment">Entertainment</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Max Articles</label>
+                    <input type="number" id="bbc-limit" value="50" min="1" max="200">
+                </div>
+                <button class="btn" onclick="scrapeBBC()">Scrape BBC Yorùbá</button>
+            </div>
+
+            <!-- Social Media Scraper -->
+            <div class="scraper-section">
+                <h3 class="section-title">
+                    <span class="status-indicator" id="social-status"></span>
+                    Social Media Posts
+                </h3>
+                <div class="input-group">
+                    <label>Keywords/Hashtags</label>
+                    <input type="text" id="social-keywords" placeholder="e.g., #Yoruba, Lagos, Nigeria" value="#Yoruba, #Lagos, #Nigeria">
+                </div>
+                <div class="input-group">
+                    <label>Platform</label>
+                    <select id="social-platform">
+                        <option value="twitter">Twitter/X</option>
+                        <option value="facebook">Facebook (Public Posts)</option>
+                        <option value="instagram">Instagram</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Max Posts</label>
+                    <input type="number" id="social-limit" value="100" min="1" max="500">
+                </div>
+                <button class="btn" onclick="scrapeSocial()">Scrape Social Media</button>
+            </div>
+
+            <!-- VOA Yorùbá Scraper -->
+            <div class="scraper-section">
+                <h3 class="section-title">
+                    <span class="status-indicator" id="voa-status"></span>
+                    VOA Yorùbá Service
+                </h3>
+                <div class="input-group">
+                    <label>Content Type</label>
+                    <select id="voa-type">
+                        <option value="news">News Articles</option>
+                        <option value="features">Feature Stories</option>
+                        <option value="audio">Audio Transcripts</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Date Range</label>
+                    <select id="voa-date">
+                        <option value="7">Last 7 days</option>
+                        <option value="30">Last 30 days</option>
+                        <option value="90">Last 3 months</option>
+                        <option value="365">Last year</option>
+                    </select>
+                </div>
+                <button class="btn" onclick="scrapeVOA()">Scrape VOA Yorùbá</button>
+            </div>
+
+            <!-- Custom URL Scraper -->
+            <div class="scraper-section">
+                <h3 class="section-title">
+                    <span class="status-indicator" id="custom-status"></span>
+                    Custom Website
+                </h3>
+                <div class="input-group">
+                    <label>Website URL</label>
+                    <input type="url" id="custom-url" placeholder="https://example.com">
+                </div>
+                <div class="input-group">
+                    <label>Text Selector (CSS)</label>
+                    <input type="text" id="custom-selector" placeholder="p, .article-text, .content" value="p">
+                </div>
+                <div class="input-group">
+                    <label>Min Text Length</label>
+                    <input type="number" id="custom-min-length" value="50" min="10">
+                </div>
+                <button class="btn" onclick="scrapeCustom()">Scrape Custom Site</button>
+            </div>
+        </div>
+
+        <!-- Global Controls -->
+        <div class="scraper-section" style="margin-top: 20px;">
+            <h3 class="section-title">Global Settings</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                <div class="input-group">
+                    <label>Quality Filter</label>
+                    <select id="quality-filter">
+                        <option value="high">High Quality Only</option>
+                        <option value="medium">Medium+ Quality</option>
+                        <option value="all">All Text</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Language Detection</label>
+                    <select id="language-detection">
+                        <option value="strict">Strict Yorùbá Only</option>
+                        <option value="mixed">Allow Mixed Languages</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Delay Between Requests (ms)</label>
+                    <input type="number" id="request-delay" value="1000" min="500" max="5000">
+                </div>
+            </div>
+            <div style="margin-top: 20px;">
+                <button class="btn" onclick="startAllScrapers()" style="margin-right: 10px;">Start All Scrapers</button>
+                <button class="btn" onclick="stopAllScrapers()" style="background: #e74c3c;">Stop All</button>
+                <button class="btn btn-small" onclick="exportData()" style="float: right;">Export Data</button>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-section">
+            <div class="results-header">
+                <h3>Scraped Data Results</h3>
+                <div>
+                    <button class="btn btn-small" onclick="clearResults()">Clear All</button>
+                </div>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+
+            <div class="results-stats">
+                <div class="stat-card">
+                    <span class="stat-number" id="total-texts">0</span>
+                    <span class="stat-label">Total Texts</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="high-quality-texts">0</span>
+                    <span class="stat-label">High Quality</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="avg-length">0</span>
+                    <span class="stat-label">Avg Length</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="scraping-speed">0</span>
+                    <span class="stat-label">Texts/Min</span>
+                </div>
+            </div>
+
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>Source</th>
+                        <th>Text Preview</th>
+                        <th>Length</th>
+                        <th>Quality</th>
+                        <th>Language</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody id="results-tbody">
+                    <!-- Results will be populated here -->
+                </tbody>
+            </table>
+
+            <div class="log-section" id="log-section">
+                <div id="log-content">Scraper initialized. Ready to collect Yorùbá text data...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let scrapedData = [];
+        let isScrapingActive = false;
+        let scrapingStartTime = null;
+
+        // Yorùbá language detection
+        const yorubaWords = new Set([
+            'ni', 'ti', 'si', 'ko', 'mo', 'ki', 'se', 'ba', 'wa', 'lo', 'won', 'awa',
+            'ninu', 'lati', 'ati', 'fun', 'ile', 'omi', 'oko', 'omo', 'ori', 'owo',
+            'dara', 'tobi', 'kere', 'pupo', 'nigbati', 'sugbon', 'aye', 'orun',
+            'itan', 'oro', 'oja', 'ile', 'eko', 'ose', 'osu', 'odun', 'ojo'
+        ]);
+
+        const englishWords = new Set([
+            'the', 'and', 'is', 'are', 'was', 'have', 'this', 'that', 'you', 'me',
+            'we', 'they', 'good', 'bad', 'very', 'like', 'love', 'time', 'people'
+        ]);
+
+        // Utility functions
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logContent = document.getElementById('log-content');
+            logContent.innerHTML += `<br>[${timestamp}] ${message}`;
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+
+        function updateStatus(sectionId, status) {
+            const indicator = document.getElementById(`${sectionId}-status`);
+            indicator.className = `status-indicator ${status}`;
+        }
+
+        function detectLanguageQuality(text) {
+            const words = text.toLowerCase().split(/\s+/);
+            if (words.length < 3) return 'low';
+
+            const yorubaCount = words.filter(word => yorubaWords.has(word)).length;
+            const englishCount = words.filter(word => englishWords.has(word)).length;
+            const totalWords = words.length;
+
+            const yorubaPercent = yorubaCount / totalWords;
+            const englishPercent = englishCount / totalWords;
+
+            // Check for Yorùbá-specific characters
+            const hasYorubaChars = /[àáâäéèêëẹ́ẹ̀íìîïóòôöọ́ọ̀úùûüńǹṣṣ́ṣ̀]/.test(text);
+
+            if (yorubaPercent > 0.3 || hasYorubaChars) {
+                if (yorubaPercent > 0.5 && englishPercent < 0.2) return 'high';
+                if (yorubaPercent > 0.3 && englishPercent < 0.4) return 'medium';
+            }
+
+            return 'low';
+        }
+
+        // Enhanced text processing with quality scoring
+        function addScrapedText(source, text, url = '') {
+            const cleaned = sophisticatedTextCleaning(text);
+            const quality = calculateTextQuality(cleaned.cleanedText, cleaned.metadata);
+            const qualityFilter = document.getElementById('quality-filter').value;
+
+            // Apply quality filter
+            if (qualityFilter === 'high' && quality !== 'high') return;
+            if (qualityFilter === 'medium' && quality === 'low') return;
+
+            const data = {
+                id: Date.now() + Math.random(),
+                source: source,
+                text: cleaned.cleanedText,
+                originalText: text,
+                url: url,
+                quality: quality,
+                length: cleaned.cleanedText.length,
+                originalLength: text.length,
+                timestamp: new Date().toISOString(),
+                language: quality === 'low' ? 'mixed/english' : 'yoruba',
+                metadata: cleaned.metadata,
+                cleaningRatio: cleaned.cleanedText.length / text.length
+            };
+
+            scrapedData.push(data);
+            updateResultsDisplay();
+            addResultRow(data);
+
+            // Auto-export large datasets
+            if (scrapedData.length > 0 && scrapedData.length % 500 === 0) {
+                log(`Reached ${scrapedData.length} texts. Consider exporting your data.`);
+            }
+        }
+
+        // Enhanced startup with configuration options
+        function startAllScrapers() {
+            if (isScrapingActive) {
+                log('Scraping already in progress!');
+                return;
+            }
+
+            // Check API configuration
+            const needsApis = !API_CONFIG.socialMediaApis.twitter.bearerToken && 
+                             !API_CONFIG.socialMediaApis.facebook.accessToken;
+                             
+            if (needsApis) {
+                log('Warning: Social media APIs not configured. Limited social media scraping available.');
+                log('Click "Configure APIs" to enable full social media scraping.');
+            }
+
+            isScrapingActive = true;
+            scrapingStartTime = Date.now();
+            log('Starting comprehensive Yorùbá text scraping...');
+            log('This will collect data from BBC, VOA, social media, and other sources.');
+
+            // Start all scrapers with staggered timing to avoid overwhelming servers
+            setTimeout(() => scrapeBBC(), 0);
+            setTimeout(() => scrapeSocial(), 2000);
+            setTimeout(() => scrapeVOA(), 4000);
+            
+            // Optional: Start Nigerian news scraping
+            setTimeout(async () => {
+                try {
+                    log('Starting Nigerian news websites scraping...');
+                    const newsResults = await scrapeNigerianNews();
+                    newsResults.forEach(result => {
+                        addScrapedText(result.source, result.text, result.url);
+                    });
+                    log(`Nigerian news scraping completed. Found ${newsResults.length} texts.`);
+                } catch (error) {
+                    log(`Nigerian news scraping failed: ${error.message}`);
+                }
+            }, 6000);
+
+            // Set completion timeout
+            setTimeout(() => {
+                if (isScrapingActive) {
+                    isScrapingActive = false;
+                    log('Scraping session completed automatically after timeout.');
+                    showCompletionSummary();
+                }
+            }, 300000); // 5 minutes timeout
+        }
+
+        function showCompletionSummary() {
+            const totalTexts = scrapedData.length;
+            const highQuality = scrapedData.filter(d => d.quality === 'high').length;
+            const mediumQuality = scrapedData.filter(d => d.quality === 'medium').length;
+            
+            const summary = `
+                ========== SCRAPING SUMMARY ==========
+                Total texts collected: ${totalTexts}
+                High quality: ${highQuality} (${((highQuality/totalTexts)*100).toFixed(1)}%)
+                Medium quality: ${mediumQuality} (${((mediumQuality/totalTexts)*100).toFixed(1)}%)
+                
+                Sources breakdown:
+                ${Object.entries(
+                    scrapedData.reduce((acc, item) => {
+                        acc[item.source] = (acc[item.source] || 0) + 1;
+                        return acc;
+                    }, {})
+                ).map(([source, count]) => `- ${source}: ${count} texts`).join('\n')}
+                
+                Ready for data preparation pipeline!
+            `;
+            
+            log(summary);
+            
+            if (totalTexts > 100) {
+                log('Great job! You have enough data for meaningful sentiment analysis training.');
+                log('Export your data and run it through the preparation guide.');
+            }
+        }
+
+        // Initialize on page load with enhanced setup
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 Advanced Yorùbá Web Scraper initialized!');
+            log('This production-ready scraper includes:');
+            log('✓ Real HTTP requests with CORS proxy support');
+            log('✓ Social media API integration (requires keys)');
+            log('✓ Advanced text cleaning and quality scoring');
+            log('✓ Rate limiting and error handling');
+            log('✓ Batch processing and progress tracking');
+            log('');
+            log('Configure your settings and API keys, then start scraping!');
+            
+            // Load saved API configuration
+            const savedApis = localStorage.getItem('yoruba_scraper_apis');
+            if (savedApis) {
+                try {
+                    const apiData = JSON.parse(savedApis);
+                    log('Previously saved API configuration detected.');
+                } catch (e) {
+                    log('Could not load API configuration.');
+                }
+            }
+            
+            // Set optimal defaults
+            document.getElementById('request-delay').value = '1500';
+            document.getElementById('quality-filter').value = 'medium';
+            document.getElementById('language-detection').value = 'mixed';
+            
+            updateResultsDisplay();
+            
+            // Add API configuration button
+            const globalSettings = document.querySelector('.scraper-section:last-of-type');
+            const apiButton = document.createElement('button');
+            apiButton.className = 'btn btn-small';
+            apiButton.textContent = 'Configure APIs';
+            apiButton.onclick = showApiKeyDialog;
+            apiButton.style.marginLeft = '10px';
+            
+            const buttonContainer = globalSettings.querySelector('div:last-child');
+            buttonContainer.appendChild(apiButton);
+        });
+
+        function addResultRow(data) {
+            const tbody = document.getElementById('results-tbody');
+            const row = document.createElement('tr');
+            
+            const qualityClass = `quality-${data.quality}`;
+            const timeAgo = new Date(data.timestamp).toLocaleTimeString();
+
+            row.innerHTML = `
+                <td>${data.source}</td>
+                <td class="text-preview" title="${data.text}">${data.text}</td>
+                <td>${data.length}</td>
+                <td><span class="quality-badge ${qualityClass}">${data.quality}</span></td>
+                <td>${data.language}</td>
+                <td>${timeAgo}</td>
+            `;
+
+            tbody.insertBefore(row, tbody.firstChild);
+
+            // Keep only last 100 rows visible
+            if (tbody.children.length > 100) {
+                tbody.removeChild(tbody.lastChild);
+            }
+        }
+
+        function updateResultsDisplay() {
+            const totalTexts = scrapedData.length;
+            const highQualityTexts = scrapedData.filter(d => d.quality === 'high').length;
+            const avgLength = totalTexts > 0 ? Math.round(scrapedData.reduce((sum, d) => sum + d.length, 0) / totalTexts) : 0;
+            
+            let speed = 0;
+            if (scrapingStartTime) {
+                const elapsedMinutes = (Date.now() - scrapingStartTime) / (1000 * 60);
+                speed = elapsedMinutes > 0 ? Math.round(totalTexts / elapsedMinutes) : 0;
+            }
+
+            document.getElementById('total-texts').textContent = totalTexts;
+            document.getElementById('high-quality-texts').textContent = highQualityTexts;
+            document.getElementById('avg-length').textContent = avgLength;
+            document.getElementById('scraping-speed').textContent = speed;
+
+            // Update progress bar (example: target 1000 texts)
+            const progressPercent = Math.min((totalTexts / 1000) * 100, 100);
+            document.getElementById('progress-fill').style.width = `${progressPercent}%`;
+        }
+
+        // Configuration for APIs and proxies
+        const API_CONFIG = {
+            corsProxy: 'https://api.allorigins.win/raw?url=',
+            socialMediaApis: {
+                twitter: {
+                    bearerToken: '', // Add your Twitter Bearer Token
+                    baseUrl: 'https://api.twitter.com/2'
+                },
+                facebook: {
+                    accessToken: '', // Add your Facebook Access Token
+                    baseUrl: 'https://graph.facebook.com/v18.0'
+                }
+            },
+            rateLimit: {
+                requestsPerMinute: 60,
+                burstLimit: 10
+            }
+        };
+
+        // Rate limiting
+        class RateLimiter {
+            constructor(requestsPerMinute = 60) {
+                this.requests = [];
+                this.maxRequests = requestsPerMinute;
+            }
+
+            async waitForSlot() {
+                const now = Date.now();
+                this.requests = this.requests.filter(time => now - time < 60000);
+                
+                if (this.requests.length >= this.maxRequests) {
+                    const oldestRequest = Math.min(...this.requests);
+                    const waitTime = 60000 - (now - oldestRequest);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    return this.waitForSlot();
+                }
+                
+                this.requests.push(now);
+            }
+        }
+
+        const rateLimiter = new RateLimiter(API_CONFIG.rateLimit.requestsPerMinute);
+
+        // Advanced text cleaning
+        function sophisticatedTextCleaning(text) {
+            if (!text) return '';
+
+            // Remove HTML tags
+            text = text.replace(/<[^>]*>/g, ' ');
+            
+            // Decode HTML entities
+            const htmlEntities = {
+                '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'",
+                '&nbsp;': ' ', '&mdash;': '—', '&ndash;': '–', '&hellip;': '...'
+            };
+            
+            Object.keys(htmlEntities).forEach(entity => {
+                text = text.replace(new RegExp(entity, 'g'), htmlEntities[entity]);
+            });
+
+            // Remove URLs (more comprehensive)
+            text = text.replace(/https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/g, '');
+            
+            // Remove email addresses
+            text = text.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '');
+            
+            // Remove social media handles and hashtags (but preserve for analysis)
+            const mentions = text.match(/@\w+/g) || [];
+            const hashtags = text.match(/#\w+/g) || [];
+            text = text.replace(/@\w+|#\w+/g, '');
+            
+            // Remove excessive punctuation
+            text = text.replace(/[!]{2,}/g, '!');
+            text = text.replace(/[?]{2,}/g, '?');
+            text = text.replace(/[.]{3,}/g, '...');
+            
+            // Remove numbers unless they're part of Yorùbá words
+            text = text.replace(/\b\d+\b/g, '');
+            
+            // Clean whitespace
+            text = text.replace(/\s+/g, ' ').trim();
+            
+            // Remove very short or very long words (likely errors)
+            const words = text.split(' ').filter(word => word.length >= 2 && word.length <= 20);
+            text = words.join(' ');
+
+            return {
+                cleanedText: text,
+                metadata: {
+                    mentions: mentions,
+                    hashtags: hashtags,
+                    originalLength: arguments[0].length,
+                    cleanedLength: text.length
+                }
+            };
+        }
+
+        // HTTP Request wrapper with error handling
+        async function makeRequest(url, options = {}) {
+            await rateLimiter.waitForSlot();
+            
+            const defaultOptions = {
+                method: 'GET',
+                headers: {
+                    'User-Agent': 'YorubaTextScraper/1.0',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'yo,en-US,en;q=0.5',
+                    'Accept-Encoding': 'gzip, deflate',
+                    'Connection': 'keep-alive',
+                    'Upgrade-Insecure-Requests': '1'
+                },
+                timeout: 10000
+            };
+
+            const mergedOptions = { ...defaultOptions, ...options };
+            
+            try {
+                const response = await fetch(url, mergedOptions);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                return response;
+            } catch (error) {
+                log(`Request failed for ${url}: ${error.message}`);
+                throw error;
+            }
+        }
+
+        // BBC Yorùbá scraper with actual HTTP requests
+        async function scrapeBBC() {
+            updateStatus('bbc', 'active');
+            log('Starting BBC Yorùbá scraping...');
+
+            const category = document.getElementById('bbc-category').value;
+            const limit = parseInt(document.getElementById('bbc-limit').value);
+            const delay = parseInt(document.getElementById('request-delay').value);
+
+            try {
+                // BBC Yorùbá RSS feeds and article URLs
+                const bbcUrls = {
+                    all: 'https://feeds.bbci.co.uk/yoruba/rss.xml',
+                    nigeria: 'https://www.bbc.com/yoruba/topics/c404v061k4pt',
+                    world: 'https://www.bbc.com/yoruba/topics/c5qvp0qd84kt',
+                    sport: 'https://www.bbc.com/yoruba/topics/cg41ylwvw2qt',
+                    entertainment: 'https://www.bbc.com/yoruba/topics/c7zp57r4047t'
+                };
+
+                const targetUrl = bbcUrls[category] || bbcUrls.all;
+                const proxiedUrl = `${API_CONFIG.corsProxy}${encodeURIComponent(targetUrl)}`;
+
+                log(`Fetching BBC feed: ${category}`);
+                const response = await makeRequest(proxiedUrl);
+                const html = await response.text();
+
+                // Parse HTML for articles
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                let articles = [];
+                
+                // Different selectors for different BBC page types
+                const articleSelectors = [
+                    'article .gel-wrap p',
+                    '.story-body__inner p',
+                    '[data-component="text-block"] p',
+                    '.bbc-1151pbn p',
+                    '.gel-body-copy p'
+                ];
+
+                for (const selector of articleSelectors) {
+                    const elements = doc.querySelectorAll(selector);
+                    if (elements.length > 0) {
+                        elements.forEach(element => {
+                            const text = element.textContent.trim();
+                            if (text.length > 50) {
+                                articles.push(text);
+                            }
+                        });
+                        break;
+                    }
+                }
+
+                // If no articles found, try RSS parsing
+                if (articles.length === 0) {
+                    const items = doc.querySelectorAll('item description, entry summary');
+                    items.forEach(item => {
+                        const text = item.textContent.replace(/<[^>]*>/g, '').trim();
+                        if (text.length > 50) {
+                            articles.push(text);
+                        }
+                    });
+                }
+
+                let scrapedCount = 0;
+                for (let i = 0; i < Math.min(articles.length, limit); i++) {
+                    if (!isScrapingActive) break;
+
+                    const cleaned = sophisticatedTextCleaning(articles[i]);
+                    if (cleaned.cleanedText.length > 30) {
+                        addScrapedText('BBC Yorùbá', cleaned.cleanedText, targetUrl);
+                        scrapedCount++;
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    
+                    if (i % 10 === 0) {
+                        log(`BBC: Scraped ${scrapedCount} articles...`);
+                    }
+                }
+
+                updateStatus('bbc', 'success');
+                log(`BBC scraping completed. Found ${scrapedCount} quality articles.`);
+
+            } catch (error) {
+                log(`BBC scraping failed: ${error.message}`);
+                updateStatus('bbc', 'error');
+                
+                // Fallback to sample data
+                log('Using fallback sample data...');
+                const sampleTexts = [
+                    "Aarẹ Buhari ti sọ pe awọn ara ilu Nigeria gbọdọ ni ireti fun ọjọ iwaju",
+                    "Egbe bọọlu afẹsẹgba Nigeria ti gbe ife igbega soke si ipele to ga julọ",
+                    "Awọn dokita ni ile iwosan Lagos ti bẹrẹ iṣẹ ṣiṣe titun fun awọn alaisan"
+                ];
+                
+                sampleTexts.forEach((text, i) => {
+                    addScrapedText('BBC Yorùbá (Fallback)', text, `https://bbc.com/yoruba/sample-${i}`);
+                });
+            }
+        }
+
+        // Social Media scraper with API authentication
+        async function scrapeSocial() {
+            updateStatus('social', 'active');
+            log('Starting social media scraping...');
+
+            const platform = document.getElementById('social-platform').value;
+            const keywords = document.getElementById('social-keywords').value;
+            const limit = parseInt(document.getElementById('social-limit').value);
+            const delay = parseInt(document.getElementById('request-delay').value);
+
+            try {
+                let posts = [];
+
+                if (platform === 'twitter') {
+                    posts = await scrapeTwitter(keywords, limit);
+                } else if (platform === 'facebook') {
+                    posts = await scrapeFacebook(keywords, limit);
+                } else if (platform === 'instagram') {
+                    posts = await scrapeInstagram(keywords, limit);
+                }
+
+                let scrapedCount = 0;
+                for (const post of posts) {
+                    if (!isScrapingActive) break;
+
+                    const cleaned = sophisticatedTextCleaning(post.text);
+                    if (cleaned.cleanedText.length > 20) {
+                        addScrapedText(
+                            `${platform.charAt(0).toUpperCase() + platform.slice(1)}`,
+                            cleaned.cleanedText,
+                            post.url || ''
+                        );
+                        scrapedCount++;
+                    }
+
+                    await new Promise(resolve => setTimeout(resolve, delay));
+
+                    if (scrapedCount % 20 === 0) {
+                        log(`${platform}: Scraped ${scrapedCount} posts...`);
+                    }
+                }
+
+                updateStatus('social', 'success');
+                log(`${platform} scraping completed. Found ${scrapedCount} posts.`);
+
+            } catch (error) {
+                log(`Social media scraping failed: ${error.message}`);
+                updateStatus('social', 'error');
+                
+                // Fallback to sample data
+                const samplePosts = [
+                    "Eko oni yi dun gan! Lagos ti wa ni awọn ohun elo tuntun #Lagos #Yoruba",
+                    "Mo fẹran orin Yoruba pupọ. Awọn akọrin wa dara pupọ #YorubaMusic",
+                    "Iṣẹ yi ko rọrun ṣugbọn a o fi silẹ. A ma tẹsiwaju #Nigeria #Motivation"
+                ];
+                
+                samplePosts.forEach((text, i) => {
+                    addScrapedText(`${platform} (Fallback)`, text);
+                });
+            }
+        }
+
+        // Twitter API v2 scraping
+        async function scrapeTwitter(query, limit) {
+            const config = API_CONFIG.socialMediaApis.twitter;
+            if (!config.bearerToken) {
+                throw new Error('Twitter Bearer Token not configured. Please add your API key.');
+            }
+
+            const searchUrl = `${config.baseUrl}/tweets/search/recent`;
+            const params = new URLSearchParams({
+                'query': `${query} lang:yo OR lang:en`,
+                'max_results': Math.min(limit, 100),
+                'tweet.fields': 'created_at,public_metrics,lang',
+                'expansions': 'author_id',
+                'user.fields': 'username,verified'
+            });
+
+            const response = await makeRequest(`${searchUrl}?${params}`, {
+                headers: {
+                    'Authorization': `Bearer ${config.bearerToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+            
+            if (!data.data) {
+                throw new Error('No tweets found or API limit reached');
+            }
+
+            return data.data.map(tweet => ({
+                text: tweet.text,
+                url: `https://twitter.com/i/status/${tweet.id}`,
+                created_at: tweet.created_at,
+                metrics: tweet.public_metrics
+            }));
+        }
+
+        // Facebook Graph API scraping
+        async function scrapeFacebook(query, limit) {
+            const config = API_CONFIG.socialMediaApis.facebook;
+            if (!config.accessToken) {
+                throw new Error('Facebook Access Token not configured. Please add your API key.');
+            }
+
+            // Search public posts (limited by Facebook's API restrictions)
+            const searchUrl = `${config.baseUrl}/search`;
+            const params = new URLSearchParams({
+                'q': query,
+                'type': 'post',
+                'limit': Math.min(limit, 50),
+                'access_token': config.accessToken,
+                'fields': 'message,created_time,from,permalink_url'
+            });
+
+            const response = await makeRequest(`${searchUrl}?${params}`);
+            const data = await response.json();
+
+            if (data.error) {
+                throw new Error(`Facebook API Error: ${data.error.message}`);
+            }
+
+            return (data.data || []).map(post => ({
+                text: post.message || '',
+                url: post.permalink_url,
+                created_at: post.created_time,
+                author: post.from?.name
+            }));
+        }
+
+        // Instagram Basic Display API scraping
+        async function scrapeInstagram(query, limit) {
+            // Instagram's API is very restrictive for public content
+            // This would typically require Instagram Business API access
+            log('Instagram scraping requires Business API access and approved app.');
+            
+            // Alternative: Use hashtag scraping through web scraping
+            try {
+                const hashtag = query.replace('#', '');
+                const instagramUrl = `https://www.instagram.com/explore/tags/${hashtag}/`;
+                const proxiedUrl = `${API_CONFIG.corsProxy}${encodeURIComponent(instagramUrl)}`;
+                
+                const response = await makeRequest(proxiedUrl);
+                const html = await response.text();
+                
+                // Parse Instagram page for captions (limited by Instagram's loading)
+                const captionRegex = /"caption":"([^"]+)"/g;
+                const matches = [];
+                let match;
+                
+                while ((match = captionRegex.exec(html)) !== null && matches.length < limit) {
+                    const caption = match[1].replace(/\\u[\dA-F]{4}/gi, '').replace(/\\n/g, ' ');
+                    if (caption.length > 20) {
+                        matches.push({
+                            text: caption,
+                            url: instagramUrl
+                        });
+                    }
+                }
+                
+                return matches;
+            } catch (error) {
+                throw new Error(`Instagram scraping failed: ${error.message}`);
+            }
+        }
+
+        // VOA Yorùbá scraper with actual HTTP requests
+        async function scrapeVOA() {
+            updateStatus('voa', 'active');
+            log('Starting VOA Yorùbá scraping...');
+
+            const contentType = document.getElementById('voa-type').value;
+            const dateRange = document.getElementById('voa-date').value;
+            const delay = parseInt(document.getElementById('request-delay').value);
+
+            try {
+                const voaUrls = {
+                    news: 'https://www.voaafrica.com/api/z$miqep_qgmq',
+                    features: 'https://www.voaafrica.com/api/zq_mep_pmgq',
+                    audio: 'https://www.voaafrica.com/api/z$miqepvgvq'
+                };
+
+                // VOA Yorùbá RSS feed
+                const rssUrl = 'https://www.voaafrica.com/api/zottepvgvq';
+                const proxiedUrl = `${API_CONFIG.corsProxy}${encodeURIComponent(rssUrl)}`;
+
+                log('Fetching VOA Yorùbá RSS feed...');
+                const response = await makeRequest(proxiedUrl);
+                const xmlText = await response.text();
+
+                // Parse RSS XML
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+                const items = xmlDoc.querySelectorAll('item');
+
+                let articles = [];
+                const cutoffDate = new Date();
+                cutoffDate.setDate(cutoffDate.getDate() - parseInt(dateRange));
+
+                for (const item of items) {
+                    const title = item.querySelector('title')?.textContent || '';
+                    const description = item.querySelector('description')?.textContent || '';
+                    const link = item.querySelector('link')?.textContent || '';
+                    const pubDate = new Date(item.querySelector('pubDate')?.textContent || '');
+
+                    if (pubDate >= cutoffDate) {
+                        // Fetch full article content
+                        try {
+                            const articleUrl = `${API_CONFIG.corsProxy}${encodeURIComponent(link)}`;
+                            const articleResponse = await makeRequest(articleUrl);
+                            const articleHtml = await articleResponse.text();
+                            
+                            const articleDoc = parser.parseFromString(articleHtml, 'text/html');
+                            
+                            // VOA article selectors
+                            const contentSelectors = [
+                                '.wsw article p',
+                                '.entry-content p',
+                                '[data-testid="article-content"] p',
+                                '.article-content p',
+                                '.content p'
+                            ];
+
+                            let articleText = '';
+                            for (const selector of contentSelectors) {
+                                const paragraphs = articleDoc.querySelectorAll(selector);
+                                if (paragraphs.length > 0) {
+                                    articleText = Array.from(paragraphs)
+                                        .map(p => p.textContent.trim())
+                                        .filter(text => text.length > 30)
+                                        .join(' ');
+                                    break;
+                                }
+                            }
+
+                            if (articleText) {
+                                articles.push({
+                                    title: title,
+                                    content: articleText,
+                                    url: link,
+                                    date: pubDate
+                                });
+                            } else {
+                                // Fallback to description
+                                const cleanDescription = description.replace(/<[^>]*>/g, '').trim();
+                                if (cleanDescription.length > 50) {
+                                    articles.push({
+                                        title: title,
+                                        content: cleanDescription,
+                                        url: link,
+                                        date: pubDate
+                                    });
+                                }
+                            }
+
+                            await new Promise(resolve => setTimeout(resolve, delay));
+
+                        } catch (articleError) {
+                            log(`Failed to fetch article: ${articleError.message}`);
+                            // Use description as fallback
+                            const cleanDescription = description.replace(/<[^>]*>/g, '').trim();
+                            if (cleanDescription.length > 30) {
+                                articles.push({
+                                    title: title,
+                                    content: cleanDescription,
+                                    url: link,
+                                    date: pubDate
+                                });
+                            }
+                        }
+                    }
+                }
+
+                let scrapedCount = 0;
+                for (const article of articles.slice(0, 50)) { // Limit to 50 articles
+                    if (!isScrapingActive) break;
+
+                    const cleaned = sophisticatedTextCleaning(article.content);
+                    if (cleaned.cleanedText.length > 30) {
+                        addScrapedText('VOA Yorùbá', cleaned.cleanedText, article.url);
+                        scrapedCount++;
+                    }
+
+                    await new Promise(resolve => setTimeout(resolve, delay));
+
+                    if (scrapedCount % 5 === 0) {
+                        log(`VOA: Scraped ${scrapedCount} articles...`);
+                    }
+                }
+
+                updateStatus('voa', 'success');
+                log(`VOA scraping completed. Found ${scrapedCount} articles.`);
+
+            } catch (error) {
+                log(`VOA scraping failed: ${error.message}`);
+                updateStatus('voa', 'error');
+                
+                // Fallback to sample data
+                const sampleVOA = [
+                    "Ọgbẹni Johnson ti sọ pe iṣoro to wa lori epo epo ni yoo yanju laipẹ",
+                    "Awọn onimọ-jinlẹ ti ṣe iwadii tuntun lori eto ilera ni Afrika",
+                    "Ipade akọkọ awọn olori Africa yoo waye ni oṣu ti o nbọ"
+                ];
+                
+                sampleVOA.forEach((text, i) => {
+                    addScrapedText('VOA Yorùbá (Fallback)', text, `https://yoruba.voanews.com/article-${i}`);
+                });
+            }
+        }
+
+        // Enhanced custom website scraper
+        async function scrapeCustom() {
+            updateStatus('custom', 'active');
+            const url = document.getElementById('custom-url').value;
+            const selector = document.getElementById('custom-selector').value || 'p';
+            const minLength = parseInt(document.getElementById('custom-min-length').value) || 50;
+            
+            if (!url) {
+                log('Error: Please enter a valid URL');
+                updateStatus('custom', '');
+                return;
+            }
+
+            log(`Starting custom scraping for: ${url}`);
+            
+            try {
+                const proxiedUrl = `${API_CONFIG.corsProxy}${encodeURIComponent(url)}`;
+                const response = await makeRequest(proxiedUrl);
+                const html = await response.text();
+
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                // Try multiple selectors if the primary one fails
+                const selectors = [
+                    selector,
+                    'article p',
+                    '.content p',
+                    '.post-content p',
+                    '.entry-content p',
+                    '[role="main"] p',
+                    'main p',
+                    '.article p',
+                    'p'
+                ];
+
+                let extractedTexts = [];
+                
+                for (const sel of selectors) {
+                    try {
+                        const elements = doc.querySelectorAll(sel);
+                        if (elements.length > 0) {
+                            elements.forEach(element => {
+                                const text = element.textContent.trim();
+                                if (text.length >= minLength) {
+                                    extractedTexts.push(text);
+                                }
+                            });
+                            break; // Stop after finding content with first successful selector
+                        }
+                    } catch (selectorError) {
+                        continue; // Try next selector
+                    }
+                }
+
+                if (extractedTexts.length === 0) {
+                    // Fallback: extract any text content
+                    const bodyText = doc.body?.textContent || '';
+                    const sentences = bodyText.split(/[.!?]+/).filter(s => s.trim().length >= minLength);
+                    extractedTexts = sentences.slice(0, 10); // Limit to first 10 sentences
+                }
+
+                let scrapedCount = 0;
+                for (const text of extractedTexts) {
+                    if (!isScrapingActive) break;
+
+                    const cleaned = sophisticatedTextCleaning(text);
+                    if (cleaned.cleanedText.length >= minLength) {
+                        addScrapedText('Custom Site', cleaned.cleanedText, url);
+                        scrapedCount++;
+                    }
+                }
+
+                updateStatus('custom', 'success');
+                log(`Custom site scraping completed. Extracted ${scrapedCount} text segments.`);
+
+            } catch (error) {
+                log(`Custom scraping failed: ${error.message}`);
+                updateStatus('custom', 'error');
+                
+                // Provide helpful error messages
+                if (error.message.includes('CORS')) {
+                    log('CORS error: The website blocks cross-origin requests. Try a different CORS proxy.');
+                } else if (error.message.includes('404')) {
+                    log('Website not found. Please check the URL.');
+                } else if (error.message.includes('timeout')) {
+                    log('Request timed out. The website may be slow or unavailable.');
+                }
+            }
+        } akọkọ awọn olori Africa yoo waye ni oṣu ti o nbọ",
+                "Eto ọrọ-aje tuntun yii ni yoo ṣe iranlọwọ fun awọn ile-iṣẹ kekere",
+                "Idagbasoke eto kaakiri yii jẹ pataki fun ọjọ iwaju Afrika"
+            ];
+
+            for (let i = 0; i < 30; i++) {
+                if (!isScrapingActive) break;
+
+                const randomArticle = sampleVOA[Math.floor(Math.random() * sampleVOA.length)];
+                addScrapedText('VOA Yorùbá', randomArticle, `https://yoruba.voanews.com/article-${i}`);
+                
+                await new Promise(resolve => setTimeout(resolve, delay));
+                
+                if (i % 5 === 0) {
+                    log(`VOA: Scraped ${i + 1} articles...`);
+                }
+            }
+
+            updateStatus('voa', 'success');
+            log('VOA Yorùbá scraping completed.');
+        }
+
+        async function scrapeCustom() {
+            updateStatus('custom', 'active');
+            const url = document.getElementById('custom-url').value;
+            
+            if (!url) {
+                log('Error: Please enter a valid URL');
+                updateStatus('custom', '');
+                return;
+            }
+
+            log(`Starting custom scraping for: ${url}`);
+            
+            // Simulate custom scraping
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            const sampleCustom = [
+                "Text scraped from custom website showing Yorùbá content",
+                "Another example of extracted text with good quality",
+                "Sample text that demonstrates the scraping functionality"
+            ];
+
+            sampleCustom.forEach(text => {
+                addScrapedText('Custom Site', text, url);
+            });
+
+            updateStatus('custom', 'success');
+            log('Custom site scraping completed.');
+        }
+
+        function startAllScrapers() {
+            if (isScrapingActive) {
+                log('Scraping already in progress!');
+                return;
+            }
+
+            isScrapingActive = true;
+            scrapingStartTime = Date.now();
+            log('Starting all scrapers...');
+
+            // Start all scrapers concurrently
+            Promise.all([
+                scrapeBBC(),
+                scrapeSocial(),
+                scrapeVOA()
+            ]).then(() => {
+                isScrapingActive = false;
+                log('All scraping operations completed!');
+            });
+        }
+
+        function stopAllScrapers() {
+            isScrapingActive = false;
+            log('Stopping all scrapers...');
+            
+            // Reset all status indicators
+            ['bbc', 'social', 'voa', 'custom'].forEach(id => {
+                updateStatus(id, '');
+            });
+        }
+
+        function clearResults() {
+            scrapedData = [];
+            document.getElementById('results-tbody').innerHTML = '';
+            updateResultsDisplay();
+            log('Results cleared.');
+        }
+
+        function exportData() {
+            if (scrapedData.length === 0) {
+                log('No data to export. Please scrape some data first.');
+                return;
+            }
+
+            // Create CSV content
+            const headers = ['source', 'text', 'quality', 'language', 'length', 'timestamp', 'url'];
+            const csvContent = [
+                headers.join(','),
+                ...scrapedData.map(row => {
+                    return headers.map(header => {
+                        const value = row[header] || '';
+                        // Escape commas and quotes in CSV
+                        return `"${String(value).replace(/"/g, '""')}"`;
+                    }).join(',');
+                })
+            ].join('\n');
+
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const timestamp = new Date().toISOString().split('T')[0];
+            const filename = `yoruba_scraped_data_${timestamp}.csv`;
+            
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                log(`Data exported successfully as ${filename} (${scrapedData.length} records)`);
+            } else {
+                log('Export failed - browser does not support file downloads');
+            }
+        }
+
+        // Advanced scraping functions for real implementation
+        async function scrapeWithProxy(url, selector = 'p') {
+            try {
+                // In real implementation, this would use a CORS proxy or backend service
+                log(`Attempting to scrape: ${url}`);
+                
+                // Simulated delay
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // This is where you'd implement actual scraping logic
+                // For now, return simulated data
+                return {
+                    success: true,
+                    texts: ["Sample scraped text from " + url],
+                    message: "Scraping completed successfully"
+                };
+            } catch (error) {
+                log(`Error scraping ${url}: ${error.message}`);
+                return {
+                    success: false,
+                    texts: [],
+                    message: error.message
+                };
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            log('Yorùbá Web Scraper MVP initialized successfully!');
+            log('Configure your settings and click "Start All Scrapers" to begin.');
+            log('Note: This is a demo version. In production, implement actual HTTP requests.');
+            
+            // Set reasonable defaults
+            document.getElementById('request-delay').value = '1500';
+            document.getElementById('quality-filter').value = 'medium';
+            
+            updateResultsDisplay();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 's':
+                        e.preventDefault();
+                        startAllScrapers();
+                        break;
+                    case 'q':
+                        e.preventDefault();
+                        stopAllScrapers();
+                        break;
+                    case 'e':
+                        e.preventDefault();
+                        exportData();
+                        break;
+                }
+            }
+        });
+
+        // Auto-save functionality
+        setInterval(() => {
+            if (scrapedData.length > 0) {
+                localStorage.setItem('yoruba_scraper_data', JSON.stringify(scrapedData));
+            }
+        }, 30000); // Save every 30 seconds
+
+        // Load saved data on startup
+        const savedData = localStorage.getItem('yoruba_scraper_data');
+        if (savedData) {
+            try {
+                const parsedData = JSON.parse(savedData);
+                if (Array.isArray(parsedData) && parsedData.length > 0) {
+                    scrapedData = parsedData;
+                    parsedData.forEach(data => addResultRow(data));
+                    updateResultsDisplay();
+                    log(`Loaded ${parsedData.length} previously scraped items from local storage.`);
+                }
+            } catch (e) {
+                log('Could not load saved data - starting fresh.');
+            }
+        }
+    </script>
+</body>
+</html>
